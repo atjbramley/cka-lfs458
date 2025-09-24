@@ -24,13 +24,13 @@ Make sure that access token generated above has read-write access to the project
 
 This is a little complicated.
 
-1 - Download the correct binary from [GitHub Releases Page](https://github.com/bitwarden/terraform-provider-bitwarden-sm/releases/tag/v0.5.2-pre) and unzip it
-2 - Rename the binary to terraform-provider-bitwarden-sm
-3 - run `chmod +x` on the binary
-4 - Place the binary in the user directory in the following path structure:
+- **1** - Download the correct binary from [GitHub Releases Page](https://github.com/bitwarden/terraform-provider-bitwarden-sm/releases/tag/v0.5.2-pre) and unzip it
+- **2** - Rename the binary to terraform-provider-bitwarden-sm
+- **3** - run `chmod +x` on the binary
+- **4** - Place the binary in the user directory in the following path structure:
 `~/.terraform.d/plugins/registry.opentofu.org/bitwarden/bitwarden-sm/0.5.2/darwin_arm64/`
 (replacing darwin_arm64 with the correct arch as nececssary)
-5 - (macOS) - the first time that the binary runs, accept the security exception in System Settings -> Security & Privacy
+- **5** - (macOS) - the first time that the binary runs, accept the security exception in System Settings -> Security & Privacy
 
 Full documentation for this step is found in the [Open Tofu CLI Config Docs](https://opentofu.org/docs/cli/config/config-file/#provider-installation)
 
