@@ -2,9 +2,10 @@ terraform {
   required_version = ">= 1.3"
 
   required_providers {
-    bitwarden-sm = {
-      source  = "bitwarden/bitwarden-sm"
-      version = "0.5.2"
+
+    bitwarden-secrets = {
+      source  = "registry.terraform.io/bitwarden/bitwarden-secrets"
+      version = "0.5.4-pre"
     }
     google = {
       source  = "hashicorp/google"
@@ -14,7 +15,7 @@ terraform {
 }
 
 module "test_bucket" {
-  source       = "./modules/gcs-bucket"
-  location     = var.gcp_region
-  bucket_name  = "tf-test-bucket-${random_id.suffix.hex}"
+  source      = "./modules/gcs-bucket"
+  location    = var.gcp_region
+  bucket_name = "tf-test-bucket-${random_id.suffix.hex}"
 }
