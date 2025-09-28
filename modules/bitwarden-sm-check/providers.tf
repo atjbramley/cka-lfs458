@@ -1,9 +1,3 @@
-provider "google" {
-  project = "cka-lfs-458"
-  region = "europe-west12"
-  credentials = file(var.credentials_file)
-}
-
 provider "bitwarden-secrets" {
   api_url         = "https://api.bitwarden.com"
   identity_url    = "https://identity.bitwarden.com"

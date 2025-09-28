@@ -14,6 +14,11 @@ terraform {
   }
 }
 
+module "bitwarden_sm_check" {
+  source = "./modules/bitwarden-sm-check"
+  bitwarden_access_token = var.bitwarden_access_token
+}
+
 module "test_bucket" {
   source      = "./modules/gcs-bucket"
   location    = var.gcp_region
