@@ -14,13 +14,26 @@ terraform {
   }
 }
 
-module "bitwarden_sm_check" {
-  source = "./modules/bitwarden-sm-check"
-  bitwarden_access_token = var.bitwarden_access_token
-}
+# Uncomment this module to test Bitwarden Secrets Manager integration
+# module "bitwarden_sm_check" {
+#   source = "./modules/bitwarden-sm-check"
+#   bitwarden_access_token = var.bitwarden_access_token
+# }
 
-module "test_bucket" {
-  source      = "./modules/gcs-bucket"
-  location    = var.gcp_region
-  bucket_name = "tf-test-bucket-${random_id.suffix.hex}"
+# Uncomment this module to test the GCP connection by creating a test GCS bucket
+# module "test_bucket" {
+#   source      = "./modules/gcs-bucket"
+#   location    = var.gcp_region
+#   bucket_name = "tf-test-bucket-${random_id.suffix.hex}"
+# }
+
+# Initial setup for GCP VPC network + CP VM instance
+module "intro-gcp-vcp-network" {
+  source   = "./modules/intro-gcp-vpc-network"
+  location = var.gcp_region
+  project  = var.gcp_project_id
+
+  providers = {
+    google = google
+  }
 }
