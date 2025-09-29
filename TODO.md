@@ -1,0 +1,1 @@
+- Check destruction order - is network being destroyed before subnet?

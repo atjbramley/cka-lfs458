@@ -1,6 +1,6 @@
 provider "google" {
-  project = "cka-lfs-458"
-  region = "europe-west12"
+  project = var.gcp_project_id
+  region = var.gcp_region
   credentials = file(var.credentials_file)
 }
 
