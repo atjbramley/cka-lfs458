@@ -18,9 +18,6 @@ variable "cp-vms" {
 
 variable "worker-vms" {
   description = "Map of worker VMs to create"
-  type = map(string)
-  default = {
-    "worker-1" = "e2-standard-2"
-    "worker-2" = "e2-standard-2"
-  }
+  type = list(string)
+  default = ["e2-standard-2", "e2-standard-2"]
 }
