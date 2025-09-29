@@ -101,6 +101,71 @@ resource "google_compute_instance" "lfs_cp" {
   }
 }
 
+# Worker VM instance(s)
+resource "google_compute_instance" "lfs_worker" {
+  count        = length(var.worker-vms)
+  name         = "lfs-worker-${count.index + 1}"
+  machine_type = var.worker-vms[count.index]
+  zone         = "europe-west12-c"
+
+  boot_disk {
+    initialize_params {
+      image = "projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20250924"
+      size  = 20
+      type  = "pd-balanced"
+    }
+    auto_delete = true
+  }
+
+  network_interface {
+    subnetwork = google_compute_subnetwork.lfclass_458_initial_setup-subnet.id
+    stack_type = "IPV4_ONLY"
+
+    access_config {
+      network_tier = "PREMIUM" # Ephemeral public IP
+    }
+  }
+
+  metadata = {
+    enable-osconfig = "TRUE"
+  }
+
+  scheduling {
+    on_host_maintenance = "MIGRATE"
+    provisioning_model  = "STANDARD"
+  }
+
+  # service_account {
+  #   email  = "465450448891-compute@developer.gserviceaccount.com"
+  #   scopes = [
+  #     "https://www.googleapis.com/auth/devstorage.read_only",
+  #     "https://www.googleapis.com/auth/logging.write",
+  #     "https://www.googleapis.com/auth/monitoring.write",
+  #     "https://www.googleapis.com/auth/service.management.readonly",
+  #     "https://www.googleapis.com/auth/servicecontrol",
+  #     "https://www.googleapis.com/auth/trace.append",
+  #   ]
+  # }
+
+  shielded_instance_config {
+    enable_secure_boot          = false
+    enable_vtpm                 = true
+    enable_integrity_monitoring = true
+  }
+
+  labels = {
+    goog-ops-agent-policy = "v2-x86-template-1-4-0"
+    goog-ec-src           = "vm_add-gcloud"
+  }
+
+  reservation_affinity {
+    type = "ANY_RESERVATION"
+  }
+}
+
+
+
+
 # # Ops Agent Policy Assignment
 # resource "google_os_config_os_policy_assignment" "ops_agent" {
 #   name     = "goog-ops-agent-v2-x86-template-1-4-0-europe-west12-c"
