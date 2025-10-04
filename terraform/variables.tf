@@ -16,6 +16,12 @@ variable "gcp_region" {
   default     = "europe-west12"
 }
 
+variable "gcp_zone" {
+  description = "The GCP zone"
+  type        = string
+  default     = "europe-west12-c"
+}
+
 variable "credentials_file" {
   description = "Path to the GCP credentials JSON file"
   type        = string
