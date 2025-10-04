@@ -1,19 +1,31 @@
 # Local .gitignore file for Terraform projects
 # Ignore Terraform state files and directories
-.bw-provider-state
-*.tfstate
-*.tfstate.backup
-.terraform/
-./terraform/*
-.terraform.lock.hcl
+terraform/.bw-provider-state
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform/
+terraform/./terraform/*
+terraform/.terraform.lock.hcl
 
 # Ignore TF secrets
-secrets.auto.tfvars
-credentials
-credentials/*
+terraform/secrets.auto.tfvars
+terraform/credentials
+terraform/credentials/*
 
 # macOS specific files
 .DS_Store
 
 # Logs
 *.log
+
+### Local Credential
+credentials
+credentials/*
+
+### Local Python Setup
+Pipfile
+Pipfile.lock
+
+
+### Ansible Setup
+

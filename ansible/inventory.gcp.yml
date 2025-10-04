@@ -1,0 +1,18 @@
+plugin: gcp_compute
+projects:
+  - cka-lfs-458
+auth_kind: serviceaccount
+service_account_file: ~/Projects/linux-foundation/cka-lfs458/credentials/ansible-gcp-inventory.json
+filters: []
+keyed_groups:
+  - key: zone
+    prefix: zone
+  - key: labels
+    prefix: label
+hostnames:
+  - name
+compose:
+  ansible_host: networkInterfaces[0].accessConfigs[0].natIP
+
+groups:
+  all: true
