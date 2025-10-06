@@ -66,6 +66,20 @@ resource "google_compute_instance" "lfs_cp" {
 
   metadata = {
     enable-osconfig = "TRUE"
+    user-data       = <<-EOF
+      #cloud-config
+      users:
+        - name: ansible
+          groups: sudo
+          shell: /bin/bash
+          sudo: ALL=(ALL) NOPASSWD:ALL
+          ssh-authorized-keys:
+            - ${file("~/.ssh/google_compute_engine.pub")}
+
+      packages:
+        - python3
+        - python3-apt
+    EOF
   }
 
   scheduling {
@@ -128,6 +142,20 @@ resource "google_compute_instance" "lfs_worker" {
 
   metadata = {
     enable-osconfig = "TRUE"
+    user-data       = <<-EOF
+      #cloud-config
+      users:
+        - name: ansible
+          groups: sudo
+          shell: /bin/bash
+          sudo: ALL=(ALL) NOPASSWD:ALL
+          ssh-authorized-keys:
+            - ${file("~/.ssh/google_compute_engine.pub")}
+
+      packages:
+        - python3
+        - python3-apt
+    EOF
   }
 
   scheduling {

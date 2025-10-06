@@ -1,0 +1,94 @@
+---
+- name: Install K8s components
+  hosts: all
+  become: true
+  remote_user: ansible
+  vars_files:
+    - ../vars/main.yml
+
+  tasks:
+    - name: Check connectivity
+      block:
+        - name: Ping the hosts
+          ansible.builtin.ping:
+
+    - name: Download & extract course materials
+      block:
+        - name: Download course files
+          ansible.builtin.get_url:
+            url: https://cm.lf.training/LFS258/{{ course_docs_name }}.tar.xz
+            url_password: "{{ cm_password }}"
+            url_username: "{{ cm_username }}"
+            dest: /tmp/{{ course_docs_name }}.tar.xz
+            mode: "0644"
+          register: course_files_download
+
+        - name: Ensure /opt/course-docs directory exists
+          ansible.builtin.file:
+            path: "{{ course_docs_dir }}"
+            state: directory
+            mode: "0755"
+
+        - name: Extract course docs
+          ansible.builtin.unarchive:
+            src: /tmp/{{ course_docs_name }}.tar.xz
+            dest: "{{ course_docs_dir }}"
+            remote_src: true
+            extra_opts: [--strip-components=2]
+          when: course_files_download.changed
+          register: course_files_unarchive
+
+        - name: Remove downloaded archive
+          ansible.builtin.file:
+            path: /tmp/{{ course_docs_name }}.tar.xz
+            state: absent
+          when: course_files_unarchive is successful
+
+    - name: Update & install pre-requisite packages
+      block:
+        - name: Update apt cache
+          ansible.builtin.apt:
+            update_cache: true
+            cache_valid_time: 3600
+
+        - name: Update system
+          ansible.builtin.apt:
+            upgrade: dist
+
+        - name: Install required packages
+          ansible.builtin.apt:
+            name:
+              - apt-transport-https
+              - ca-certificates
+              - curl
+              - gnupg
+              - socat
+              - software-properties-common
+            state: present
+
+    - name: Perform OS-level setup
+      block:
+        - name: Disable swap
+          ansible.builtin.command:
+            cmd: swapoff -a
+          when: ansible_swaptotal_mb | int > 0
+          changed_when: true
+          args:
+            warn: false
+
+        - name: Ensure swap is disabled in fstab
+          ansible.builtin.replace:
+            path: /etc/fstab
+            regexp: '^([^#].*\sswap\s+)'
+            replace: '# \1'
+          register: swap_disabled
+
+        - name: Report swap status
+          ansible.builtin.debug:
+            msg: >
+              Swap disabled: {{ 'Yes' if swap_disabled.changed else 'No, already disabled' }}
+
+
+
+
+    # - name: Install Kubernetes
