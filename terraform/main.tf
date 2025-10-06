@@ -40,12 +40,12 @@ module "tf-ansible-check" {
 }
 
 # Initial setup for GCP VPC network + CP VM instance
-# module "intro-gcp-vcp-network" {
-#   source   = "./modules/intro-gcp-vpc-network"
-#   location = var.gcp_region
-#   project  = var.gcp_project_id
+module "intro-gcp-vcp-network" {
+  source   = "./modules/intro-gcp-vpc-network"
+  location = var.gcp_region
+  project  = var.gcp_project_id
 
-#   providers = {
-#     google = google
-#   }
-# }
+  providers = {
+    google = google
+  }
+}

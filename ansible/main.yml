@@ -1,0 +1,4 @@
+---
+# - import_playbook: playbooks/0-init-test-playbook/main.yml
+- import_playbook: playbooks/3.1-install-kubernetes/main.yml
+...
