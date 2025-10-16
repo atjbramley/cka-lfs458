@@ -204,8 +204,8 @@
         - name: Enable SystemdCgroup in containerd config
           ansible.builtin.replace:
             path: /etc/containerd/config.toml
-            regexp: "^SystemdCgroup = false"
-            replace: "SystemdCgroup = true"
+            regexp: '^\s*SystemdCgroup\s*=\s*false'
+            replace: 'SystemdCgroup = true'
           notify: Restart containerd
 
     # Step 13
@@ -248,9 +248,9 @@
       - name: Install Kubernetes components at specific versions
         ansible.builtin.apt:
           name:
-            - "kubelet={{ kubernetes_version }}"
-            - "kubeadm={{ kubernetes_version }}"
-            - "kubectl={{ kubernetes_version }}"
+            - "kubelet={{ kubernetes_version_apt }}"
+            - "kubeadm={{ kubernetes_version_apt }}"
+            - "kubectl={{ kubernetes_version_apt }}"
           state: present
           update_cache: true
           allow_downgrade: true
@@ -299,3 +299,22 @@
           {{ hostvars[host].node_ip_internal | default(hostvars[host].ansible_default_ipv4.address) }} {{ host }} worker-{{ host.split('-')[-1] }} w{{ host.split('-')[-1] }}
           {% endif %}
           {% endfor %}
+
+    # Step 19
+    - name: Initialize Kubernetes control plane
+      block:
+        - name: Set control plane IP fact from inventory
+          ansible.builtin.set_fact:
+            control_plane_ip: "{{ hostvars[groups['_control_plane'][0]].node_ip_internal | default(hostvars[groups['_control_plane'][0]].ansible_default_ipv4.address) }}"
+
+        - name: Check control plane IP
+          ansible.builtin.debug:
+            msg: "Control Plane IP is {{ control_plane_ip }}"
+
+        - name: Create kubeadm config file from template
+          ansible.builtin.template:
+            src: kubeadm-config.yaml.j2
+            dest: /root/kubeadm-config.yaml
+            owner: root
+            group: root
+            mode: "0644"
