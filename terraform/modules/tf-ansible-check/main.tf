@@ -13,7 +13,7 @@ resource "google_compute_instance" "ansible_vm" {
 
   boot_disk {
     initialize_params {
-      image = "ubuntu-2204-jammy-v20240110"
+      image = "ubuntu-2404-noble-amd64-v20251014"
     }
   }
 

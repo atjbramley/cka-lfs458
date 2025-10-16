@@ -3,16 +3,21 @@ projects:
   - cka-lfs-458
 auth_kind: serviceaccount
 service_account_file: ~/Projects/linux-foundation/cka-lfs458/credentials/ansible-gcp-inventory.json
-filters: []
-keyed_groups:
-  - key: zone
-    prefix: zone
-  - key: labels
-    prefix: label
-hostnames:
-  - name
+
+filters:
+  labels.environment = "cka-lfs458"
+  # labels.k8s_role = "control-plane,worker-node"
+
 compose:
+  node_name: name
+  node_ip_internal: networkInterfaces[0].networkIP
+  node_ip_public: networkInterfaces[0].accessConfigs[0].natIP
   ansible_host: networkInterfaces[0].accessConfigs[0].natIP
 
-groups:
-  all: true
+keyed_groups:
+  - key: labels.k8s_role
+    prefix: ''
+
+hostnames:
+  - name
+
