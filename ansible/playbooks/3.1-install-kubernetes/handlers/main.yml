@@ -3,9 +3,10 @@
   become: true
 
 - name: Restart containerd
-  ansible.builtin.service:
+  ansible.builtin.systemd:
     name: containerd
     state: restarted
+    enabled: true
 
 - name: Update apt cache
   ansible.builtin.apt:
