@@ -12,12 +12,16 @@ variable "cp-vms" {
   description = "Map of control plane VMs to create"
   type = map(string)
   default = {
-    "cp" = "e2-standard-2"
+    "cp-1" = "e2-standard-2"
+    "cp-2" = "e2-standard-2"
   }
 }
 
 variable "worker-vms" {
   description = "Map of worker VMs to create"
-  type = list(string)
-  default = ["e2-standard-2", "e2-standard-2"]
+  type = map(string)
+  default = {
+    "worker-1" = "e2-standard-2"
+    "worker-2" = "e2-standard-2"
+  }
 }

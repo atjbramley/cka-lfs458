@@ -28,16 +28,16 @@ terraform {
 # }
 
 # Checking TF + Ansible workflow
-module "tf-ansible-check" {
-  source   = "./modules/tf-ansible-check"
-  location = var.gcp_region
-  project  = var.gcp_project_id
-  zone     = var.gcp_zone
+# module "tf-ansible-check" {
+#   source   = "./modules/tf-ansible-check"
+#   location = var.gcp_region
+#   project  = var.gcp_project_id
+#   zone     = var.gcp_zone
 
-  providers = {
-    google = google
-  }
-}
+#   providers = {
+#     google = google
+#   }
+# }
 
 # Initial setup for GCP VPC network + CP VM instance
 module "intro-gcp-vcp-network" {

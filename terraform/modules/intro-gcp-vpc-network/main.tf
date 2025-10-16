@@ -46,9 +46,16 @@ resource "google_compute_instance" "lfs_cp" {
   machine_type = each.value
   zone         = "europe-west12-c"
 
+  labels = {
+    goog-ops-agent-policy = "v2-x86-template-1-4-0"
+    goog-ec-src           = "vm_add-gcloud"
+    k8s_role              = "control-plane"
+    environment           = "cka-lfs458"
+  }
+
   boot_disk {
     initialize_params {
-      image = "projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20250924"
+      image = "projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20251014"
       size  = 20
       type  = "pd-balanced"
     }
@@ -105,11 +112,6 @@ resource "google_compute_instance" "lfs_cp" {
     enable_integrity_monitoring = true
   }
 
-  labels = {
-    goog-ops-agent-policy = "v2-x86-template-1-4-0"
-    goog-ec-src           = "vm_add-gcloud"
-  }
-
   reservation_affinity {
     type = "ANY_RESERVATION"
   }
@@ -117,10 +119,17 @@ resource "google_compute_instance" "lfs_cp" {
 
 # Worker VM instance(s)
 resource "google_compute_instance" "lfs_worker" {
-  count        = length(var.worker-vms)
-  name         = "lfs-worker-${count.index + 1}"
-  machine_type = var.worker-vms[count.index]
+  for_each     = var.worker-vms
+  name         = each.key == "worker" ? "lfs-worker" : "lfs-${each.key}"
+  machine_type = each.value
   zone         = "europe-west12-c"
+
+  labels = {
+    goog-ops-agent-policy = "v2-x86-template-1-4-0"
+    goog-ec-src           = "vm_add-gcloud"
+    k8s_role              = "worker-node"
+    environment           = "cka-lfs458"
+  }
 
   boot_disk {
     initialize_params {
@@ -179,11 +188,6 @@ resource "google_compute_instance" "lfs_worker" {
     enable_secure_boot          = false
     enable_vtpm                 = true
     enable_integrity_monitoring = true
-  }
-
-  labels = {
-    goog-ops-agent-policy = "v2-x86-template-1-4-0"
-    goog-ec-src           = "vm_add-gcloud"
   }
 
   reservation_affinity {

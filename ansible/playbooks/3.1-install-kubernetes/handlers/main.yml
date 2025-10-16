@@ -1,0 +1,13 @@
+- name: Reload sysctl
+  ansible.builtin.command: sysctl --system
+  become: true
+
+- name: Restart containerd
+  ansible.builtin.service:
+    name: containerd
+    state: restarted
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
