@@ -15,286 +15,263 @@
         - name: Ping the hosts
           ansible.builtin.ping:
 
-    #   # Step 2
-    # - name: Download & extract course materials
-    #   block:
-    #     - name: Download course files
-    #       ansible.builtin.get_url:
-    #         url: https://cm.lf.training/LFS258/{{ course_docs_name }}.tar.xz
-    #         url_password: "{{ cm_password }}"
-    #         url_username: "{{ cm_username }}"
-    #         dest: /tmp/{{ course_docs_name }}.tar.xz
-    #         mode: "0644"
-    #       register: course_files_download
+      # Step 2
+    - name: Download & extract course materials
+      block:
+        - name: Download course files
+          ansible.builtin.get_url:
+            url: https://cm.lf.training/LFS258/{{ course_docs_name }}.tar.xz
+            url_password: "{{ cm_password }}"
+            url_username: "{{ cm_username }}"
+            dest: /tmp/{{ course_docs_name }}.tar.xz
+            mode: "0644"
+          register: course_files_download
 
-    #     - name: Ensure /opt/course-docs directory exists
-    #       ansible.builtin.file:
-    #         path: "{{ course_docs_dir }}"
-    #         state: directory
-    #         mode: "0755"
+        - name: Ensure /opt/course-docs directory exists
+          ansible.builtin.file:
+            path: "{{ course_docs_dir }}"
+            state: directory
+            mode: "0755"
 
-    #     - name: Extract course docs
-    #       ansible.builtin.unarchive:
-    #         src: /tmp/{{ course_docs_name }}.tar.xz
-    #         dest: "{{ course_docs_dir }}"
-    #         remote_src: true
-    #         extra_opts: [--strip-components=2]
-    #       when: course_files_download.changed
-    #       register: course_files_unarchive
+        - name: Extract course docs
+          ansible.builtin.unarchive:
+            src: /tmp/{{ course_docs_name }}.tar.xz
+            dest: "{{ course_docs_dir }}"
+            remote_src: true
+            extra_opts: [--strip-components=2]
+          when: course_files_download.changed
+          register: course_files_unarchive
 
-    #     - name: Remove downloaded archive
-    #       ansible.builtin.file:
-    #         path: /tmp/{{ course_docs_name }}.tar.xz
-    #         state: absent
-    #       when: course_files_unarchive is successful
+        - name: Remove downloaded archive
+          ansible.builtin.file:
+            path: /tmp/{{ course_docs_name }}.tar.xz
+            state: absent
+          when: course_files_unarchive is successful
 
-    #   # Step 4
-    # - name: Update & install pre-requisite packages
-    #   block:
-    #     - name: Update apt cache
-    #       ansible.builtin.apt:
-    #         update_cache: true
-    #         cache_valid_time: 3600
+      # Step 4
+    - name: Update & install pre-requisite packages
+      block:
+        - name: Update apt cache
+          ansible.builtin.apt:
+            update_cache: true
+            cache_valid_time: 3600
 
-    #     - name: Update system
-    #       ansible.builtin.apt:
-    #         upgrade: dist
+        - name: Update system
+          ansible.builtin.apt:
+            upgrade: dist
 
-    #     # Step 6
-    #     - name: Install required packages
-    #       ansible.builtin.apt:
-    #         name:
-    #           - apt-transport-https
-    #           - ca-certificates
-    #           - curl
-    #           - gnupg
-    #           - socat
-    #           - software-properties-common
-    #         state: present
+        # Step 6
+        - name: Install required packages
+          ansible.builtin.apt:
+            name:
+              - apt-transport-https
+              - ca-certificates
+              - curl
+              - gnupg
+              - socat
+              - software-properties-common
+            state: present
 
-    #   # Step 7
-    # - name: Perform OS-level setup
-    #   block:
-    #     - name: Disable swap
-    #       ansible.builtin.command:
-    #         cmd: swapoff -a
-    #       when: ansible_swaptotal_mb | int > 0
-    #       changed_when: true
-    #       args:
-    #         warn: false
+      # Step 7
+    - name: Perform OS-level setup
+      block:
+        - name: Disable swap
+          ansible.builtin.command:
+            cmd: swapoff -a
+          when: ansible_swaptotal_mb | int > 0
+          changed_when: true
+          args:
+            warn: false
 
-    #     - name: Ensure swap is disabled in fstab
-    #       ansible.builtin.replace:
-    #         path: /etc/fstab
-    #         regexp: '^([^#].*\sswap\s+)'
-    #         replace: '# \1'
-    #       register: swap_disabled
+        - name: Ensure swap is disabled in fstab
+          ansible.builtin.replace:
+            path: /etc/fstab
+            regexp: '^([^#].*\sswap\s+)'
+            replace: '# \1'
+          register: swap_disabled
 
-    #     - name: Report swap status
-    #       ansible.builtin.debug:
-    #         msg: >
-    #           Swap disabled: {{ 'Yes' if swap_disabled.changed else 'No, already disabled' }}
+        - name: Report swap status
+          ansible.builtin.debug:
+            msg: >
+              Swap disabled: {{ 'Yes' if swap_disabled.changed else 'No, already disabled' }}
 
-    #   # Step 8
-    # - name: Load required modules & ensure loaded on boot
-    #   block:
-    #     - name: Load br_netfilter module
-    #       ansible.builtin.modprobe:
-    #         name: "{{ item }}"
-    #         state: present
-    #       loop:
-    #         - br_netfilter
-    #         - overlay
+      # Step 8
+    - name: Load required modules & ensure loaded on boot
+      block:
+        - name: Load br_netfilter module
+          ansible.builtin.modprobe:
+            name: "{{ item }}"
+            state: present
+          loop:
+            - br_netfilter
+            - overlay
 
-    #     - name: Ensure modules are loaded on boot
-    #       ansible.builtin.copy:
-    #         dest: /etc/modules-load.d/k8s.conf
-    #         content: |
-    #           br_netfilter
-    #           overlay
-    #         owner: root
-    #         group: root
-    #         mode: "0644"
+        - name: Ensure modules are loaded on boot
+          ansible.builtin.copy:
+            dest: /etc/modules-load.d/k8s.conf
+            content: |
+              br_netfilter
+              overlay
+            owner: root
+            group: root
+            mode: "0644"
 
-    #   # Step 9
-    # - name: Configure kernel networking params for Kubernetes
-    #   block:
-    #     - name: Set kubernetes.conf from template
-    #       ansible.builtin.template:
-    #         src: kubernetes.conf.j2
-    #         dest: /etc/sysctl.d/kubernetes.conf
-    #         owner: root
-    #         group: root
-    #         mode: "0644"
-    #       notify: Reload sysctl
+      # Step 9
+    - name: Configure kernel networking params for Kubernetes
+      block:
+        - name: Set kubernetes.conf from template
+          ansible.builtin.template:
+            src: kubernetes.conf.j2
+            dest: /etc/sysctl.d/kubernetes.conf
+            owner: root
+            group: root
+            mode: "0644"
+          notify: Reload sysctl
 
-    #     # Step 10
-    #     - name: Apply sysctl params
-    #       ansible.builtin.command:
-    #         cmd: sysctl --system
-    #       changed_when: false
+        # Step 10
+        - name: Apply sysctl params
+          ansible.builtin.command:
+            cmd: sysctl --system
+          changed_when: false
 
-    #   # Step 11
-    # - name: Prepare apt for containerd installation
-    #   block:
-    #     - name: Ensure apt keyrings directory exists
-    #       ansible.builtin.file:
-    #         path: "{{ keyrings_dir }}"
-    #         state: directory
-    #         mode: "0755"
+      # Step 11
+    - name: Prepare apt for containerd installation
+      block:
+        - name: Ensure apt keyrings directory exists
+          ansible.builtin.file:
+            path: "{{ keyrings_dir }}"
+            state: directory
+            mode: "0755"
 
-    #     - name: Download Docker's GPG key to temp .asc file
-    #       ansible.builtin.get_url:
-    #         url: https://download.docker.com/linux/ubuntu/gpg
-    #         dest: "{{ keyrings_dir }}/docker.asc"
-    #         mode: "0644"
-    #       register: docker_asc
+        - name: Download Docker's GPG key to temp .asc file
+          ansible.builtin.get_url:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            dest: "{{ keyrings_dir }}/docker.asc"
+            mode: "0644"
+          register: docker_asc
 
-    #     - name: Convert GPG key to dearmoured format
-    #       ansible.builtin.command:
-    #         cmd: gpg --dearmor -o "{{ keyrings_dir }}/docker.gpg" "{{ keyrings_dir }}/docker.asc"
-    #       args:
-    #         creates: "{{ keyrings_dir }}/docker.gpg"
-    #       when: docker_asc.changed
-    #       notify: Update apt cache
+        - name: Convert GPG key to dearmoured format
+          ansible.builtin.command:
+            cmd: gpg --dearmor -o "{{ keyrings_dir }}/docker.gpg" "{{ keyrings_dir }}/docker.asc"
+          args:
+            creates: "{{ keyrings_dir }}/docker.gpg"
+          when: docker_asc.changed
+          notify: Update apt cache
 
-    #     - name: Normalise architecture fact
-    #       # ansible_architecture returns x86_64 but apt expects amd64
-    #       ansible.builtin.set_fact:
-    #         apt_architecture: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+        - name: Normalise architecture fact
+          # ansible_architecture returns x86_64 but apt expects amd64
+          ansible.builtin.set_fact:
+            apt_architecture: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
 
-    #     - name: Add Docker apt repository
-    #       ansible.builtin.apt_repository:
-    #         repo: >
-    #           deb [arch={{ apt_architecture }} signed-by=/etc/apt/keyrings/docker.gpg]
-    #           https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable
-    #         filename: docker
-    #         state: present
-    #         update_cache: true
+        - name: Add Docker apt repository
+          ansible.builtin.apt_repository:
+            repo: >
+              deb [arch={{ apt_architecture }} signed-by=/etc/apt/keyrings/docker.gpg]
+              https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable
+            filename: docker
+            state: present
+            update_cache: true
 
-    #   # Step 12
-    # - name: Install & configure containerd
-    #   block:
-    #     - name: Check containerd.io availability
-    #       ansible.builtin.apt:
-    #         name: containerd.io
-    #         state: present
-    #         update_cache: yes
+      # Step 12
+    - name: Install & configure containerd
+      block:
+        - name: Check containerd.io availability
+          ansible.builtin.apt:
+            name: containerd.io
+            state: present
+            update_cache: yes
 
-    #     - name: Install containerd.io package
-    #       ansible.builtin.apt:
-    #         name: containerd.io
-    #         state: present
-    #         update_cache: true
+        - name: Install containerd.io package
+          ansible.builtin.apt:
+            name: containerd.io
+            state: present
+            update_cache: true
 
-    #     - name: Generate default containerd.io config file
-    #       ansible.builtin.command:
-    #         cmd: containerd config default
-    #       register: containerd_default_config
-    #       changed_when: false
+        - name: Generate default containerd.io config file
+          ansible.builtin.command:
+            cmd: containerd config default
+          register: containerd_default_config
+          changed_when: false
 
-    #     - name: Write containerd config file
-    #       ansible.builtin.copy:
-    #         dest: /etc/containerd/config.toml
-    #         content: "{{ containerd_default_config.stdout }}"
-    #         owner: root
-    #         group: root
-    #         mode: "0644"
+        - name: Write containerd config file
+          ansible.builtin.copy:
+            dest: /etc/containerd/config.toml
+            content: "{{ containerd_default_config.stdout }}"
+            owner: root
+            group: root
+            mode: "0644"
 
-    #     - name: Enable SystemdCgroup in containerd config
-    #       ansible.builtin.replace:
-    #         path: /etc/containerd/config.toml
-    #         regexp: "^SystemdCgroup = false"
-    #         replace: "SystemdCgroup = true"
-    #       notify: Restart containerd
+        - name: Enable SystemdCgroup in containerd config
+          ansible.builtin.replace:
+            path: /etc/containerd/config.toml
+            regexp: "^SystemdCgroup = false"
+            replace: "SystemdCgroup = true"
+          notify: Restart containerd
 
-    # # Step 13
-    # - name: Prepare apt for Kubernetes installation
-    #   block:
-    #   - name: Download public signing key for K8s apt repo to temp asc file
-    #     ansible.builtin.get_url:
-    #       url: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
-    #       dest: "{{ keyrings_dir }}/kubernetes-apt-key.asc"
-    #       mode: "0644"
-    #     register: k8s_apt_key_asc
+    # Step 13
+    - name: Prepare apt for Kubernetes installation
+      block:
+      - name: Download public signing key for K8s apt repo to temp asc file
+        ansible.builtin.get_url:
+          url: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
+          dest: "{{ keyrings_dir }}/kubernetes-apt-key.asc"
+          mode: "0644"
+        register: k8s_apt_key_asc
 
-    #   - name: Convert K8s GPG key to dearmoured format
-    #     ansible.builtin.command:
-    #       cmd: gpg --dearmor -o "{{ keyrings_dir }}/kubernetes-apt-keyring.gpg" "{{ keyrings_dir }}/kubernetes-apt-key.asc"
-    #     args:
-    #       creates: "{{ keyrings_dir }}/kubernetes-apt-key.gpg"
-    #     when: k8s_apt_key_asc.changed
-    #     notify: Update apt cache
-    #     register: k8s_apt_key
+      - name: Convert K8s GPG key to dearmoured format
+        ansible.builtin.command:
+          cmd: gpg --dearmor -o "{{ keyrings_dir }}/kubernetes-apt-keyring.gpg" "{{ keyrings_dir }}/kubernetes-apt-key.asc"
+        args:
+          creates: "{{ keyrings_dir }}/kubernetes-apt-key.gpg"
+        when: k8s_apt_key_asc.changed
+        notify: Update apt cache
+        register: k8s_apt_key
 
-    #   - name: Normalise architecture fact
-    #     # ansible_architecture returns x86_64 but apt expects amd64
-    #     ansible.builtin.set_fact:
-    #       apt_architecture: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+      - name: Normalise architecture fact
+        # ansible_architecture returns x86_64 but apt expects amd64
+        ansible.builtin.set_fact:
+          apt_architecture: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
 
-    #   # Steps 14 & 15
-    #   - name: Add Kubernetes apt repository
-    #     ansible.builtin.apt_repository:
-    #       repo: >
-    #         deb [arch={{ apt_architecture }} signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg]
-    #         https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /
-    #       filename: kubernetes
-    #       state: present
-    #       update_cache: true
+      # Steps 14 & 15
+      - name: Add Kubernetes apt repository
+        ansible.builtin.apt_repository:
+          repo: >
+            deb [arch={{ apt_architecture }} signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg]
+            https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /
+          filename: kubernetes
+          state: present
+          update_cache: true
 
-    # - name: Install Kubernetes components
-    #   block:
-    #   # Step 16
-    #   - name: Install Kubernetes components at specific versions
-    #     ansible.builtin.apt:
-    #       name:
-    #         - "kubelet={{ kubernetes_version }}"
-    #         - "kubeadm={{ kubernetes_version }}"
-    #         - "kubectl={{ kubernetes_version }}"
-    #       state: present
-    #       update_cache: true
-    #       allow_downgrade: true
-    #       force: yes
-    #     notify: Update apt cache
+    - name: Install Kubernetes components
+      block:
+      # Step 16
+      - name: Install Kubernetes components at specific versions
+        ansible.builtin.apt:
+          name:
+            - "kubelet={{ kubernetes_version }}"
+            - "kubeadm={{ kubernetes_version }}"
+            - "kubectl={{ kubernetes_version }}"
+          state: present
+          update_cache: true
+          allow_downgrade: true
+          force: yes
+        notify: Update apt cache
 
-    #   - name: Hold Kubernetes packages
-    #     ansible.builtin.dpkg_selections:
-    #       name: "{{ item }}"
-    #       selection: hold
-    #     loop:
-    #         - kubelet
-    #         - kubeadm
-    #         - kubectl
+      - name: Hold Kubernetes packages
+        ansible.builtin.dpkg_selections:
+          name: "{{ item }}"
+          selection: hold
+        loop:
+            - kubelet
+            - kubeadm
+            - kubectl
 
-    # - name: IP Networking for K8s
-    #   block:
-    #     # Step 17
-    #     - name: Obtain node primary IP address
-    #       ansible.builtin.set_fact:
-    #         node_primary_ip: "{{ ansible_default_ipv4.address }}"
-
-    # # Step 18
-    # - name: Add Kubernetes nodes to /etc/hosts
-    #   ansible.builtin.blockinfile:
-    #     path: /etc/hosts
-    #     marker: "# {mark} ANSIBLE MANAGED K8S HOSTS"
-    #     block: |
-    #       {% set cp_nodes = groups.get('_control_plane', []) %}
-    #       {% set worker_nodes = groups.get('_worker_node', []) %}
-    #       {% set all_nodes = cp_nodes + worker_nodes %}
-
-    #       {# Ensure that the host's own entry comes first #}
-    #       {% for host in all_nodes if host == inventory_hostname %}
-    #       {{ hostvars[host].node_ip_internal | default(hostvars[host].ansible_default_ipv4.address) }} {{ host }}
-    #       {% endfor %}
-
-    #       {% for host in all_nodes if host != inventory_hostname %}
-    #       {% if host in cp_nodes %}
-    #       {{ hostvars[host].node_ip_internal | default(hostvars[host].ansible_default_ipv4.address) }} {{ host }} k8scp-{{ host.split('-')[-1] }}
-    #       {% elif host in worker_nodes %}
-    #       {{ hostvars[host].node_ip_internal | default(hostvars[host].ansible_default_ipv4.address) }} {{ host }} worker-{{ host.split('-')[-1] }}
-    #       {% endif %}
-    #       {% endfor %}
+    - name: IP Networking for K8s
+      block:
+        # Step 17
+        - name: Obtain node primary IP address
+          ansible.builtin.set_fact:
+            node_primary_ip: "{{ ansible_default_ipv4.address }}"
 
     # Step 18
     - name: Add Kubernetes nodes to /etc/hosts
