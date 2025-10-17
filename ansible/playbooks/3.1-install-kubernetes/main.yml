@@ -201,12 +201,18 @@
             group: root
             mode: "0644"
 
-        - name: Enable SystemdCgroup in containerd config
-          ansible.builtin.replace:
+        - name: Ensure containerd uses systemd cgroup driver
+          ansible.builtin.lineinfile:
             path: /etc/containerd/config.toml
-            regexp: '^\s*SystemdCgroup\s*=\s*false'
-            replace: "SystemdCgroup = true"
-          notify: Restart containerd
+            regexp: '^\s*SystemdCgroup\s*='
+            line: "SystemdCgroup = true"
+            insertafter: '^\[plugins\."io.containerd.grpc.v1.cri"\]'
+
+        - name: Restart containerd immediately to apply config changes
+          ansible.builtin.systemd:
+            name: containerd
+            state: restarted
+            enabled: true
 
     # Step 13
     - name: Prepare apt for Kubernetes installation
@@ -329,3 +335,43 @@
           vars:
             control_plane_name: "cp{{ inventory_hostname.split('-')[-1]}}"
           when: inventory_hostname == groups['_control_plane'][0]
+
+    # Step 20
+    - name: Initialise K8s cluster with cp1 as control plane node
+      block:
+        - name: Flush handlers to ensure containerd is restarted before kubeadm init
+          ansible.builtin.meta: flush_handlers
+          # when: inventory_hostname == groups['_control_plane'][0]
+
+        - name: Initialise Kubernetes control plane on first control plane node
+          ansible.builtin.command:
+            cmd: >
+              kubeadm init
+              --config=/root/kubeadm-config.yaml
+              --upload-certs
+              --node-name="{{ control_plane_name }}"
+          args:
+            creates: /etc/kubernetes/admin.conf
+          when: inventory_hostname == groups['_control_plane'][0]
+          register: kubeadm_init
+          notify: Save kubeadm outputs
+
+        # - name: Inspect full kubeadm_init output for debugging
+        #   ansible.builtin.debug:
+        #     var: kubeadm_init
+        #   when: inventory_hostname == groups['_control_plane'][0] and kubeadm_init is defined
+
+        - name: Inspect kubeadm_init output
+          ansible.builtin.debug:
+            msg: 
+              - "{{ kubeadm_init.stdout_lines }}" # standard output from kubeadm init, formatted as a list of lines
+              - "Output length = {{ kubeadm_init.stdout_lines | length }}" # lines of output from kubeadm init
+              - "Errors = {{ kubeadm_init.stderr }}" # any error output from kubeadm init
+              - "Command executed = {{ kubeadm_init.cmd }}" # command executed
+              - "Return Code = {{ kubeadm_init.rc }}" # return code
+              - "Changed = {{ kubeadm_init.changed }}" # whether the task reported a change
+              - "Failure = {{ kubeadm_init.failed }}" # whether the task reported failure
+              - "Start-time = {{ kubeadm_init.start }}" # timestamp when the task started
+              - "End-time = {{ kubeadm_init.end }}" # timestamp when the task ended
+              - "Task-duration = {{ kubeadm_init.delta }}" # duration of the task
+          when: inventory_hostname == groups['_control_plane'][0] and kubeadm_init is defined
