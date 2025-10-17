@@ -65,6 +65,7 @@
           ansible.builtin.apt:
             name:
               - apt-transport-https
+              - bash-completion
               - ca-certificates
               - curl
               - gnupg
@@ -435,3 +436,35 @@
           until: cilium_rollout.rc == 0
           run_once: true
           when: inventory_hostname == groups['_control_plane'][0]
+
+
+    # Step 23
+    - name: Enable bash completion for kubectl for k8s_ssh_user
+      block:
+        - name: Ensure bash completion package is installed
+          ansible.builtin.apt:
+            name: bash-completion
+            state: present
+            update_cache: true
+
+        - name: Add kubectl bash completion to k8s_ssh_user's .bashrc
+          ansible.builtin.lineinfile:
+            path: "/home/{{ k8s_ssh_user }}/.bashrc"
+            line: 'source <(kubectl completion bash)'
+            insertafter: EOF
+            state: present
+            create: true
+            owner: "{{ k8s_ssh_user }}"
+            group: "{{ k8s_ssh_user }}"
+          become: true
+          when: k8s_ssh_user is defined and k8s_ssh_user != 'root'
+
+        - name: Source the updated .bashrc to enable kubectl completion
+          ansible.builtin.shell: 
+            cmd: "source <(kubectl completion bash)"
+          args:
+            executable: /bin/bash
+          become: true
+          when: k8s_ssh_user is defined and k8s_ssh_user != 'root'
+
+      when: inventory_hostname in groups['_control_plane']
