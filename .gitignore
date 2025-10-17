@@ -29,4 +29,4 @@ Pipfile.lock
 
 
 ### Ansible Setup
-
+ansible/playbooks/3.1-install-kubernetes/outputs/*
