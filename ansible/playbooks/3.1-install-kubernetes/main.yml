@@ -205,63 +205,63 @@
           ansible.builtin.replace:
             path: /etc/containerd/config.toml
             regexp: '^\s*SystemdCgroup\s*=\s*false'
-            replace: 'SystemdCgroup = true'
+            replace: "SystemdCgroup = true"
           notify: Restart containerd
 
     # Step 13
     - name: Prepare apt for Kubernetes installation
       block:
-      - name: Download public signing key for K8s apt repo to temp asc file
-        ansible.builtin.get_url:
-          url: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
-          dest: "{{ keyrings_dir }}/kubernetes-apt-key.asc"
-          mode: "0644"
-        register: k8s_apt_key_asc
+        - name: Download public signing key for K8s apt repo to temp asc file
+          ansible.builtin.get_url:
+            url: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
+            dest: "{{ keyrings_dir }}/kubernetes-apt-key.asc"
+            mode: "0644"
+          register: k8s_apt_key_asc
 
-      - name: Convert K8s GPG key to dearmoured format
-        ansible.builtin.command:
-          cmd: gpg --dearmor -o "{{ keyrings_dir }}/kubernetes-apt-keyring.gpg" "{{ keyrings_dir }}/kubernetes-apt-key.asc"
-        args:
-          creates: "{{ keyrings_dir }}/kubernetes-apt-key.gpg"
-        when: k8s_apt_key_asc.changed
-        notify: Update apt cache
-        register: k8s_apt_key
+        - name: Convert K8s GPG key to dearmoured format
+          ansible.builtin.command:
+            cmd: gpg --dearmor -o "{{ keyrings_dir }}/kubernetes-apt-keyring.gpg" "{{ keyrings_dir }}/kubernetes-apt-key.asc"
+          args:
+            creates: "{{ keyrings_dir }}/kubernetes-apt-key.gpg"
+          when: k8s_apt_key_asc.changed
+          notify: Update apt cache
+          register: k8s_apt_key
 
-      - name: Normalise architecture fact
-        # ansible_architecture returns x86_64 but apt expects amd64
-        ansible.builtin.set_fact:
-          apt_architecture: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+        - name: Normalise architecture fact
+          # ansible_architecture returns x86_64 but apt expects amd64
+          ansible.builtin.set_fact:
+            apt_architecture: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
 
-      # Steps 14 & 15
-      - name: Add Kubernetes apt repository
-        ansible.builtin.apt_repository:
-          repo: >
-            deb [arch={{ apt_architecture }} signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg]
-            https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /
-          filename: kubernetes
-          state: present
-          update_cache: true
+        # Steps 14 & 15
+        - name: Add Kubernetes apt repository
+          ansible.builtin.apt_repository:
+            repo: >
+              deb [arch={{ apt_architecture }} signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg]
+              https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /
+            filename: kubernetes
+            state: present
+            update_cache: true
 
     - name: Install Kubernetes components
       block:
-      # Step 16
-      - name: Install Kubernetes components at specific versions
-        ansible.builtin.apt:
-          name:
-            - "kubelet={{ kubernetes_version_apt }}"
-            - "kubeadm={{ kubernetes_version_apt }}"
-            - "kubectl={{ kubernetes_version_apt }}"
-          state: present
-          update_cache: true
-          allow_downgrade: true
-          force: yes
-        notify: Update apt cache
+        # Step 16
+        - name: Install Kubernetes components at specific versions
+          ansible.builtin.apt:
+            name:
+              - "kubelet={{ kubernetes_version_apt }}"
+              - "kubeadm={{ kubernetes_version_apt }}"
+              - "kubectl={{ kubernetes_version_apt }}"
+            state: present
+            update_cache: true
+            allow_downgrade: true
+            force: yes
+          notify: Update apt cache
 
-      - name: Hold Kubernetes packages
-        ansible.builtin.dpkg_selections:
-          name: "{{ item }}"
-          selection: hold
-        loop:
+        - name: Hold Kubernetes packages
+          ansible.builtin.dpkg_selections:
+            name: "{{ item }}"
+            selection: hold
+          loop:
             - kubelet
             - kubeadm
             - kubectl
@@ -307,14 +307,25 @@
           ansible.builtin.set_fact:
             control_plane_ip: "{{ hostvars[groups['_control_plane'][0]].node_ip_internal | default(hostvars[groups['_control_plane'][0]].ansible_default_ipv4.address) }}"
 
+        - name: Set control plane name fact
+          ansible.builtin.set_fact:
+            control_plane_name: "cp{{ inventory_hostname.split('-')[-1]}}"
+          when: "'_control_plane' in group_names"
+
         - name: Check control plane IP
           ansible.builtin.debug:
-            msg: "Control Plane IP is {{ control_plane_ip }}"
+            msg:
+              - Control Plane IP is {{ control_plane_ip }}
+              - Control Plane Name is {{ control_plane_name | default('not set for worker nodes') }}
+          when: "'_control_plane' in group_names"
 
-        - name: Create kubeadm config file from template
+        - name: Create kubeadm config file from template on first control plane node
           ansible.builtin.template:
             src: kubeadm-config.yaml.j2
             dest: /root/kubeadm-config.yaml
             owner: root
             group: root
             mode: "0644"
+          vars:
+            control_plane_name: "cp{{ inventory_hostname.split('-')[-1]}}"
+          when: inventory_hostname == groups['_control_plane'][0]
