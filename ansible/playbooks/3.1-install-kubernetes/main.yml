@@ -375,3 +375,63 @@
               - "End-time = {{ kubeadm_init.end }}" # timestamp when the task ended
               - "Task-duration = {{ kubeadm_init.delta }}" # duration of the task
           when: inventory_hostname == groups['_control_plane'][0] and kubeadm_init is defined
+
+    # Step 21
+    - name: Configure kubectl for non-root user on control plane node
+      block:
+        - name: Create .kube directory for ansible user
+          ansible.builtin.file:
+            dest: "/home/{{ k8s_ssh_user }}/.kube"
+            state: directory
+
+        # On remote control plane node only
+        - name: Copy admin.conf to k8s_ssh_user's kube config
+          ansible.builtin.copy:
+            src: /etc/kubernetes/admin.conf
+            dest: "/home/{{ k8s_ssh_user }}/.kube/config"
+            owner: "{{ k8s_ssh_user }}"
+            group: "{{ k8s_ssh_user }}"
+            mode: "0600"
+            remote_src: true
+          when: inventory_hostname == groups['_control_plane'][0]
+
+        # Copy to local workstation for kubectl use
+        - name: Save kubeconfig locally
+          ansible.builtin.fetch:
+            src: "/etc/kubernetes/admin.conf"
+            dest: "{{ playbook_dir }}/outputs/kubeconfig"
+            flat: yes
+          run_once: true
+          become: true
+          when: inventory_hostname == groups['_control_plane'][0]
+
+    # Step 22
+    - name: Install a CNI plugin (Cilium) on control plane node
+      block:
+        - name: Render Cilium CNI manifest to file from template on CP node
+          ansible.builtin.template:
+            src: cilium-cni.yaml.j2
+            dest: /root/cilium-cni.yaml
+            owner: root
+            group: root
+            mode: "0644"
+          run_once: true
+          when: inventory_hostname == groups['_control_plane'][0]
+
+        - name: Install Cilium CNI on control plane node
+          ansible.builtin.command:
+            cmd: >
+              kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f /root/cilium-cni.yaml
+          when: inventory_hostname == groups['_control_plane'][0]
+
+        - name: Wait for Cilium pods to be ready
+          ansible.builtin.command:
+            cmd: >
+              kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system rollout status ds/cilium
+          become: true
+          retries: 10
+          delay: 15
+          register: cilium_rollout
+          until: cilium_rollout.rc == 0
+          run_once: true
+          when: inventory_hostname == groups['_control_plane'][0]
