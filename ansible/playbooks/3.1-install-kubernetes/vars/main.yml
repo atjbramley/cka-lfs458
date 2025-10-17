@@ -4,6 +4,8 @@ course_docs_dir: "/opt/course-docs"
 cm_username: "LFtraining"
 cm_password: "Penguin2014"
 
+k8s_ssh_user: "abramley"
+
 bridge_nf_call_ip6tables: 1
 bridge_nf_call_iptables: 1
 ipv4_ip_forward: 1
