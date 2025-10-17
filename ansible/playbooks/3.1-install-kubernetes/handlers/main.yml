@@ -12,3 +12,28 @@
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
+
+- name: Save kubeadm init output
+  listen: Save kubeadm outputs
+  ansible.builtin.copy:
+    content: "{{ kubeadm_init.stdout }}"
+    dest: "{{ playbook_dir}}/outputs/kubeadm-init-output.txt"
+  delegate_to: localhost
+  run_once: true
+  become: false
+  when: kubeadm_init is defined and kubeadm_init.rc == 0
+
+- name: Save kubeadm join commands
+  listen: Save kubeadm outputs
+  ansible.builtin.blockinfile:
+    path: ./join-commands.txt
+    create: true
+    block: |
+      ### Control Plane Join Command ###
+      {{ (kubeadm_init.stdout | regex_search('kubeadm join.*control-plane.*', multiline=True)) | default('Not found') }}
+
+      ### Worker Node Join Command ###
+      {{ (kubeadm_init.stdout | regex_search('kubeadm join.*--token.*', multiline=True)) | default('Not found') }}
+  delegate_to: localhost
+  run_once: true
+  when: kubeadm_init is defined and kubeadm_init.rc == 0
