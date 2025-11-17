@@ -1,10 +1,15 @@
 course_docs_name: "LFS258_V2025-06-18_SOLUTIONS"
 course_docs_dir: "/opt/course-docs"
 
-cm_username: "LFtraining"
-cm_password: "Penguin2014"
+# Linux Foundation Credentials
+lfs:
+  # cm_username: "63754df3-601f-4cfd-afac-b39300fa985e"
+  # cm_password: "d7da3a30-bfd0-4cb0-b2fa-b39300faad29"
+  cm_username: "LFtraining"
+  cm_password: "Penguin2014"
 
 k8s_ssh_user: "abramley"
+# k8s_ssh_user: "d9f36f15-64a9-4480-82fb-b39300faf9f3"
 
 bridge_nf_call_ip6tables: 1
 bridge_nf_call_iptables: 1
