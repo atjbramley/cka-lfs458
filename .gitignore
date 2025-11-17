@@ -27,6 +27,11 @@ credentials/*
 Pipfile
 Pipfile.lock
 
-
-### Ansible Setup
+## Ansible Setup
 ansible/playbooks/3.1-install-kubernetes/outputs/*
+.ansible
+.ansible/*
+
+# VSCode settings
+.vscode
+.vscode/settings.json
