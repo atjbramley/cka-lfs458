@@ -1,0 +1,19 @@
+- name: Reset Kubernetes on worker nodes
+  hosts: _worker_node
+  become: yes
+  tasks:
+    - name: Reset kubeadm
+      ansible.builtin.command:
+        cmd: kubeadm reset -f
+      register: kubeadm_reset
+
+    # - name: Remove CNI network interfaces
+    #   ansible.builtin.command:
+    #     cmd: ip link delete {{ item }}
+    #   loop:
+    #     - cni0
+    #     - flannel.1
+    #   ignore_errors: yes
+
+    # - name: Remove CNI configuration files
+    #   ansible.builtin.file:
