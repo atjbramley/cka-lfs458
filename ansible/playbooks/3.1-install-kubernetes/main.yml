@@ -488,7 +488,7 @@
             - not kubelet_conf.stat.exists
           changed_when: >
             join_result.stdout is defined and
-            'This node has joined the cluster' in join_result.stdout"
+            'This node has joined the cluster' in join_result.stdout
 
         - name: Report join status
           ansible.builtin.debug:
