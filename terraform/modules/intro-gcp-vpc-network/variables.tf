@@ -13,7 +13,7 @@ variable "cp-vms" {
   type = map(string)
   default = {
     "cp-1" = "e2-standard-2"
-    "cp-2" = "e2-standard-2"
+    # "cp-2" = "e2-standard-2"
   }
 }
 
