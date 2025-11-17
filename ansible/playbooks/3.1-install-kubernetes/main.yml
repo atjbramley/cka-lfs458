@@ -9,6 +9,23 @@
     - import_tasks: handlers/main.yml
 
   tasks:
+    # - name: Direct debug of vars
+    #   ansible.builtin.debug:
+    #     var: lookup('bitwarden.secrets.lookup', '63754df3-601f-4cfd-afac-b39300fa985e')
+
+    # - name: Simple Debug
+    #   ansible.builtin.debug:
+    #     # msg: "CM Username: {{ lookup('bitwarden.secrets.lookup', lfs.cm_username) }}"
+    #     var: lookup('bitwarden.secrets.lookup', lfs.cm_username)
+
+    # - name: Debug Bitwarden Secrets
+    #   ansible.builtin.debug:
+    #     msg:
+    #       - "CM Username: {{ lookup('bitwarden.secrets.lookup', vars['lfs']['cm_username']) }}"
+    #       # - "CM Password: {{ lookup('bitwarden.secrets.lookup', vars['lfs']['cm_password']) }}"
+    #       # - "K8s SSH User: {{ lookup('bitwarden.secrets.lookup', vars['k8s_ssh_user']) }}"
+    #   when: true  # Set to true to enable debugging of Bitwarden secrets
+
     # Step 1
     - name: Check connectivity
       block:
@@ -18,11 +35,26 @@
       # Step 2
     - name: Download & extract course materials
       block:
+        # - name: Download course files
+        #   ansible.builtin.get_url:
+        #     url: https://cm.lf.training/LFS258/{{ course_docs_name }}.tar.xz
+        #     url_password: "{{ lookup('bitwarden.secrets.lookup, vars['lfs']['cm_username']') }}"
+        #     url_username: "{{ lookup('bitwarden.secrets.lookup, vars['lfs']['cm_password']') }}"
+        #     dest: /tmp/{{ course_docs_name }}.tar.xz
+        #     mode: "0644"
+        #   register: course_files_download
+
+        # - name: Debug LFS Credentials
+        #   ansible.builtin.debug:
+        #     msg:
+        #       - "LFS CM Username: {{ lfs.cm_username }}"
+        #       - "LFS CM Password: {{ lfs.cm_password }}"
+
         - name: Download course files
           ansible.builtin.get_url:
             url: https://cm.lf.training/LFS258/{{ course_docs_name }}.tar.xz
-            url_password: "{{ cm_password }}"
-            url_username: "{{ cm_username }}"
+            url_password: "{{ lfs.cm_password }}"
+            url_username: "{{ lfs.cm_username }}"
             dest: /tmp/{{ course_docs_name }}.tar.xz
             mode: "0644"
           register: course_files_download
@@ -180,7 +212,7 @@
           ansible.builtin.apt:
             name: containerd.io
             state: present
-            update_cache: yes
+            update_cache: true
 
         - name: Install containerd.io package
           ansible.builtin.apt:
@@ -355,18 +387,16 @@
             creates: /etc/kubernetes/admin.conf
           when: inventory_hostname == groups['_control_plane'][0]
           register: kubeadm_init
-          notify: Save kubeadm outputs
-
-        # - name: Inspect full kubeadm_init output for debugging
-        #   ansible.builtin.debug:
-        #     var: kubeadm_init
-        #   when: inventory_hostname == groups['_control_plane'][0] and kubeadm_init is defined
+          # TO-DO - write this to bws
+          # notify: Save kubeadm outputs
 
         - name: Inspect kubeadm_init output
           ansible.builtin.debug:
-            msg: 
-              - "{{ kubeadm_init.stdout_lines }}" # standard output from kubeadm init, formatted as a list of lines
+            msg:
+              - "Type: {{ kubeadm_init.stdout_lines | type_debug }}" # type of the registered variable
               - "Output length = {{ kubeadm_init.stdout_lines | length }}" # lines of output from kubeadm init
+              - "First element type: {{ kubeadm_init.stdout_lines[0] | type_debug }}" # type of first element in stdout_lines
+              - "{{ kubeadm_init.stdout_lines }}" # standard output from kubeadm init, formatted as a list of lines
               - "Errors = {{ kubeadm_init.stderr }}" # any error output from kubeadm init
               - "Command executed = {{ kubeadm_init.cmd }}" # command executed
               - "Return Code = {{ kubeadm_init.rc }}" # return code
@@ -377,6 +407,96 @@
               - "Task-duration = {{ kubeadm_init.delta }}" # duration of the task
           when: inventory_hostname == groups['_control_plane'][0] and kubeadm_init is defined
 
+    - name: Extract worker join command from kubeadm_init output
+      block:
+        - name: Extract worker join command line-1 from kubeadm_init output (token)
+          ansible.builtin.set_fact:
+            kubeadm_worker_join_cmd_1: >-
+              {{
+                (
+                  kubeadm_init.stdout_lines
+                  | select('search', 'kubeadm join')
+                  | list
+                  | first
+                  | regex_replace('\\$', '')
+                  | trim
+                )
+              }}
+          when: inventory_hostname == groups['_control_plane'][0] and kubeadm_init is defined
+
+        - name: Extract worker join command line-2 from kubeadm_init output (ca-cert-hash)
+          ansible.builtin.set_fact:
+            kubeadm_worker_join_cmd_2: >-
+              {{
+                kubeadm_init.stdout_lines
+                | select('search', '--discovery-token-ca-cert-hash')
+                | map('trim')
+                | map('regex_replace', '^.*(--discovery-token-ca-cert-hash\s+\S+).*$', '\1')
+                | map('regex_replace', '--discovery-token-ca-cert-hash\s+', '')
+                | first
+              }}
+          when: inventory_hostname == groups['_control_plane'][0] and kubeadm_init is defined
+
+        - name: Debug line 1
+          ansible.builtin.debug:
+            msg: "Kubeadm join command line 1: {{ kubeadm_worker_join_cmd_1 }}"
+          when: inventory_hostname == groups['_control_plane'][0] and kubeadm_init is defined
+
+        - name: Debug line 2
+          ansible.builtin.debug:
+            msg: "Kubeadm join command line 2: {{ kubeadm_worker_join_cmd_2 }}"
+          when: inventory_hostname == groups['_control_plane'][0] and kubeadm_init is defined
+
+        - name: Combine join command and discovery hash into final join command
+          ansible.builtin.set_fact:
+            kubeadm_worker_join_cmd: "{{ kubeadm_worker_join_cmd_1 }} --discovery-token-ca-cert-hash {{ kubeadm_worker_join_cmd_2 }}"
+          when:
+            - inventory_hostname == groups['_control_plane'][0]
+            - kubeadm_init is defined
+
+        - name: Debug final kubeadm join command
+          ansible.builtin.debug:
+            msg: "Kubeadm join command: {{ kubeadm_worker_join_cmd }}"
+          when: inventory_hostname == groups['_control_plane'][0] and kubeadm_init is defined
+
+    # interstitial step: Share join command with worker nodes
+    - name: Share kubeadm join command with worker nodes
+      ansible.builtin.set_fact:
+        kubeadm_worker_join_cmd: "{{ hostvars[groups['_control_plane'][0]].kubeadm_worker_join_cmd }}"
+      when: "'_worker_node' in group_names"
+
+    - name: Debug shared kubeadm join command on worker nodes
+      ansible.builtin.debug:
+        msg: "Shared kubeadm join command from worker: {{ kubeadm_worker_join_cmd }}"
+      when: "'_worker_node' in group_names"
+
+    # interstitial step: Join worker nodes to cluster
+    - name: Join worker nodes to Kubernetes cluster
+      block:
+        - name: Check if kubelet is already joined to cluster
+          ansible.builtin.stat:
+            path: /etc/kubernetes/kubelet.conf
+          register: kubelet_conf
+
+        - name: Join worker node to cluster
+          ansible.builtin.command:
+            cmd: >
+              {{ kubeadm_worker_join_cmd }} --node-name="worker-{{ inventory_hostname.split('-')[-1] }}"
+          register: join_result
+          when:
+            - "'_worker_node' in group_names"
+            - not kubelet_conf.stat.exists
+          changed_when: >
+            join_result.stdout is defined and
+            'This node has joined the cluster' in join_result.stdout"
+
+        - name: Report join status
+          ansible.builtin.debug:
+            msg: >
+              Worker node {{ inventory_hostname }} join
+              {{ 'succeeded' if join_result.changed else 'skipped, already joined' }}
+          when: "'_worker_node' in group_names"
+
     # Step 21
     - name: Configure kubectl for non-root user on control plane node
       block:
@@ -384,8 +504,7 @@
           ansible.builtin.file:
             dest: "/home/{{ k8s_ssh_user }}/.kube"
             state: directory
-
-        # On remote control plane node only
+       # On remote control plane node only
         - name: Copy admin.conf to k8s_ssh_user's kube config
           ansible.builtin.copy:
             src: /etc/kubernetes/admin.conf
@@ -401,7 +520,7 @@
           ansible.builtin.fetch:
             src: "/etc/kubernetes/admin.conf"
             dest: "{{ playbook_dir }}/outputs/kubeconfig"
-            flat: yes
+            flat: true
           run_once: true
           become: true
           when: inventory_hostname == groups['_control_plane'][0]
@@ -419,26 +538,25 @@
           run_once: true
           when: inventory_hostname == groups['_control_plane'][0]
 
-        - name: Install Cilium CNI on control plane node
-          ansible.builtin.command:
-            cmd: >
-              kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f /root/cilium-cni.yaml
-          when: inventory_hostname == groups['_control_plane'][0]
+    - name: Install Cilium CNI on control plane node
+      ansible.builtin.command:
+        cmd: >
+          kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f /root/cilium-cni.yaml
+      when: inventory_hostname == groups['_control_plane'][0]
 
-        - name: Wait for Cilium pods to be ready
-          ansible.builtin.command:
-            cmd: >
-              kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system rollout status ds/cilium
-          become: true
-          retries: 10
-          delay: 15
-          register: cilium_rollout
-          until: cilium_rollout.rc == 0
-          run_once: true
-          when: inventory_hostname == groups['_control_plane'][0]
+    - name: Wait for Cilium pods to be ready
+      ansible.builtin.command:
+        cmd: >
+          kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system rollout status ds/cilium
+      become: true
+      retries: 10
+      delay: 15
+      register: cilium_rollout
+      until: cilium_rollout.rc == 0
+      run_once: true
+      when: inventory_hostname == groups['_control_plane'][0]
 
-
-    # Step 23
+   # Step 23
     - name: Enable bash completion for kubectl for k8s_ssh_user
       block:
         - name: Ensure bash completion package is installed
@@ -447,24 +565,24 @@
             state: present
             update_cache: true
 
-        - name: Add kubectl bash completion to k8s_ssh_user's .bashrc
-          ansible.builtin.lineinfile:
-            path: "/home/{{ k8s_ssh_user }}/.bashrc"
-            line: 'source <(kubectl completion bash)'
-            insertafter: EOF
-            state: present
-            create: true
-            owner: "{{ k8s_ssh_user }}"
-            group: "{{ k8s_ssh_user }}"
-          become: true
-          when: k8s_ssh_user is defined and k8s_ssh_user != 'root'
+    - name: Add kubectl bash completion to k8s_ssh_user's .bashrc
+      ansible.builtin.lineinfile:
+        path: "/home/{{ k8s_ssh_user }}/.bashrc"
+        line: "source <(kubectl completion bash)"
+        insertafter: EOF
+        state: present
+        create: true
+        owner: "{{ k8s_ssh_user }}"
+        group: "{{ k8s_ssh_user }}"
+      become: true
+      when: k8s_ssh_user is defined and k8s_ssh_user != 'root'
 
-        - name: Source the updated .bashrc to enable kubectl completion
-          ansible.builtin.shell: 
-            cmd: "source <(kubectl completion bash)"
-          args:
-            executable: /bin/bash
-          become: true
-          when: k8s_ssh_user is defined and k8s_ssh_user != 'root'
+    - name: Source the updated .bashrc to enable kubectl completion
+      ansible.builtin.shell:
+        cmd: "source <(kubectl completion bash)"
+      args:
+        executable: /bin/bash
+      become: true
+      when: k8s_ssh_user is defined and k8s_ssh_user != 'root'
 
-      when: inventory_hostname in groups['_control_plane']
+  # End of playbook
