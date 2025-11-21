@@ -247,6 +247,26 @@
             state: restarted
             enabled: true
 
+    # Step 12.1
+    # From labs 3.5 - 6-7, set crictl configuration to use modern notation
+    - name: Configure crictl endpoints
+      block:
+        - name: Ensure /etc/crictl.yaml exists with correct endpoints
+          ansible.builtin.copy:
+            dest: /etc/crictl.yaml
+            content: |
+              runtime-endpoint: unix:///run/containerd/containerd.sock
+              image-endpoint: unix:///run/containerd/containerd.sock
+            owner: root
+            group: root
+            mode: "0644"
+
+        - name: Verify crictl can connect to containerd
+          ansible.builtin.command:
+            cmd: crictl ps
+          register: crictl_ps_output
+          failed_when: crictl_ps_output.rc != 0
+
     # Step 13
     - name: Prepare apt for Kubernetes installation
       block:
