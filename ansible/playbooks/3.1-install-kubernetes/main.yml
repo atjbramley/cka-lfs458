@@ -249,6 +249,47 @@
 
     # Step 12.1
     # From labs 3.5 - 6-7, set crictl configuration to use modern notation
+    - name: Install crictl
+      vars:
+        crictl_url: "https://github.com/kubernetes-sigs/cri-tools/releases/download/v{{ crictl_version }}/crictl-v{{ crictl_version }}-linux-amd64.tar.gz"
+        crictl_install_dir: "/usr/local/bin"
+
+      block:
+        - name: Check for existing crictl installation
+          ansible.builtin.stat:
+            path: "{{ crictl_install_dir }}/crictl"
+          register: crictl_stat
+
+        - name: Download crictl tarball if not already present
+          ansible.builtin.get_url:
+            url: "{{ crictl_url }}"
+            dest: /tmp/crictl-{{ crictl_version }}-linux-{{ crictl_arch }}.tar.gz
+            mode: "0644"
+          when: not crictl_stat.stat.exists
+          register: crictl_download
+
+        - name: Debug crictl location
+          ansible.builtin.debug:
+            msg: "crictl was installed to {{ crictl_download.dest }}"
+
+        - name: Extract crictl binary
+          ansible.builtin.unarchive:
+            src: "{{ crictl_download.dest }}"
+            dest: "{{ crictl_install_dir }}"
+            remote_src: true
+            mode: "0755"
+          when: not crictl_stat.stat.exists
+
+        - name: Assert crictl binary exists
+          ansible.builtin.stat:
+            path: "{{ crictl_install_dir }}/crictl"
+          register: crictl_binary_stat
+
+        - name: Fail if crictl binary is not installed
+          ansible.builtin.fail:
+            msg: "crictl binary was not installed successfully."
+          when: not crictl_binary_stat.stat.exists
+
     - name: Configure crictl endpoints
       block:
         - name: Ensure /etc/crictl.yaml exists with correct endpoints
@@ -266,6 +307,7 @@
             cmd: crictl ps
           register: crictl_ps_output
           failed_when: crictl_ps_output.rc != 0
+          changed_when: false
 
     # Step 13
     - name: Prepare apt for Kubernetes installation

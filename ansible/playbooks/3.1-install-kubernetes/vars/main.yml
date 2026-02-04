@@ -19,6 +19,14 @@ keyrings_dir: /etc/apt/keyrings
 
 kubernetes_version_apt: "1.32.1-1.1"
 
+crictl_arch_map:
+  x86_64: amd64
+  aarch64: arm64
+  armv7l: arm
+
+crictl_arch: "{{ crictl_arch_map[ansible_architecture] }}"
+crictl_version: "1.32.0"
+
 # Kubeadm config values
 kubernetes_version_kubeadm: "1.32.1"
 podSubnet: "192.168.0.0/16"
