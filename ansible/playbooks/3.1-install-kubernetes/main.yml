@@ -271,6 +271,7 @@
         - name: Debug crictl location
           ansible.builtin.debug:
             msg: "crictl was installed to {{ crictl_download.dest }}"
+          when: not crictl_stat.stat.exists
 
         - name: Extract crictl binary
           ansible.builtin.unarchive:
@@ -639,12 +640,26 @@
       become: true
       when: k8s_ssh_user is defined and k8s_ssh_user != 'root'
 
-    - name: Source the updated .bashrc to enable kubectl completion
-      ansible.builtin.shell:
-        cmd: "source <(kubectl completion bash)"
-      args:
-        executable: /bin/bash
-      become: true
-      when: k8s_ssh_user is defined and k8s_ssh_user != 'root'
+    - name: Configure kubectl alias for all users
+      ansible.builtin.copy:
+        dest: /etc/profile.d/kubectl.sh
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          #!/bin/bash
+          if command -v kubectl >/dev/null 2>&1; then
+            alias k='kubectl'
+            complete -o default -F __start_kubectl k 2>/dev/null || true
+          fi
+
+
+    # - name: Source the updated .bashrc to enable kubectl completion
+    #   ansible.builtin.shell:
+    #     cmd: "source <(kubectl completion bash)"
+    #   args:
+    #     executable: /bin/bash
+    #   become: true
+    #   when: k8s_ssh_user is defined and k8s_ssh_user != 'root'
 
   # End of playbook
