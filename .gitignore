@@ -23,6 +23,9 @@ terraform/credentials/*
 credentials
 credentials/*
 
+### Shared BWS access token for Terraform + Ansible
+/secrets.yml
+
 ### Local Python Setup
 Pipfile
 Pipfile.lock
