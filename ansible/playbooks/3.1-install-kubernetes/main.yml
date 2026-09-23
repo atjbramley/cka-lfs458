@@ -5,27 +5,12 @@
   remote_user: ansible
   vars_files:
     - vars/main.yml
+    # Gitignored, repo root. Also read by Terraform via yamldecode().
+    - "{{ playbook_dir }}/../../../secrets.yml"
   handlers:
     - import_tasks: handlers/main.yml
 
   tasks:
-    # - name: Direct debug of vars
-    #   ansible.builtin.debug:
-    #     var: lookup('bitwarden.secrets.lookup', '63754df3-601f-4cfd-afac-b39300fa985e')
-
-    # - name: Simple Debug
-    #   ansible.builtin.debug:
-    #     # msg: "CM Username: {{ lookup('bitwarden.secrets.lookup', lfs.cm_username) }}"
-    #     var: lookup('bitwarden.secrets.lookup', lfs.cm_username)
-
-    # - name: Debug Bitwarden Secrets
-    #   ansible.builtin.debug:
-    #     msg:
-    #       - "CM Username: {{ lookup('bitwarden.secrets.lookup', vars['lfs']['cm_username']) }}"
-    #       # - "CM Password: {{ lookup('bitwarden.secrets.lookup', vars['lfs']['cm_password']) }}"
-    #       # - "K8s SSH User: {{ lookup('bitwarden.secrets.lookup', vars['k8s_ssh_user']) }}"
-    #   when: true  # Set to true to enable debugging of Bitwarden secrets
-
     # Step 1
     - name: Check connectivity
       block:
@@ -35,28 +20,18 @@
       # Step 2
     - name: Download & extract course materials
       block:
-        # - name: Download course files
-        #   ansible.builtin.get_url:
-        #     url: https://cm.lf.training/LFS258/{{ course_docs_name }}.tar.xz
-        #     url_password: "{{ lookup('bitwarden.secrets.lookup, vars['lfs']['cm_username']') }}"
-        #     url_username: "{{ lookup('bitwarden.secrets.lookup, vars['lfs']['cm_password']') }}"
-        #     dest: /tmp/{{ course_docs_name }}.tar.xz
-        #     mode: "0644"
-        #   register: course_files_download
-
-        # - name: Debug LFS Credentials
-        #   ansible.builtin.debug:
-        #     msg:
-        #       - "LFS CM Username: {{ lfs.cm_username }}"
-        #       - "LFS CM Password: {{ lfs.cm_password }}"
-
         - name: Download course files
           ansible.builtin.get_url:
             url: https://cm.lf.training/LFS258/{{ course_docs_name }}.tar.xz
-            url_password: "{{ lfs.cm_password }}"
-            url_username: "{{ lfs.cm_username }}"
+            url_username: "{{ lookup('bitwarden.secrets.lookup',
+                                bws.secret_ids.lfs_cm_username,
+                                access_token=bitwarden_access_token) }}"
+            url_password: "{{ lookup('bitwarden.secrets.lookup',
+                                bws.secret_ids.lfs_cm_password,
+                                access_token=bitwarden_access_token) }}"
             dest: /tmp/{{ course_docs_name }}.tar.xz
             mode: "0644"
+          no_log: true
           register: course_files_download
 
         - name: Ensure /opt/course-docs directory exists

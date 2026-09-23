@@ -1,0 +1,9 @@
+---
+# google.cloud (gcp_compute inventory plugin) ships with the `ansible` PyPI
+# package; bitwarden.secrets does not, so it must be declared here.
+#
+#   ansible-galaxy collection install -r ansible/requirements.yml
+collections:
+  - name: bitwarden.secrets
+    version: "1.0.1"
+...
