@@ -2,7 +2,9 @@ plugin: gcp_compute
 projects:
   - cka-lfs-458
 auth_kind: serviceaccount
-service_account_file: ~/Projects/linux-foundation/cka-lfs458/credentials/ansible-gcp-inventory.json
+# Key supplied by TF from BWS
+# Path relative to ansible/, where ansible.cfg lives.
+service_account_file: .gcp-sa-key.json
 
 filters:
   labels.environment = "cka-lfs458"
