@@ -11,6 +11,22 @@
     - import_tasks: handlers/main.yml
 
   tasks:
+    - name: Resolve Bitwarden secrets
+      ansible.builtin.set_fact:
+        lfs_secrets: >-
+          {{
+            lfs_secrets | default({}) |
+            combine({ item.key: lookup('bitwarden.secrets.lookup', item.value,
+                                       access_token=bitwarden_access_token) })
+          }}
+      loop:
+        - { key: "cm_username", value: "{{ bws.secret_ids.lfs_cm_username }}" }
+        - { key: "cm_password", value: "{{ bws.secret_ids.lfs_cm_password }}" }
+      run_once: true
+      delegate_to: localhost
+      become: false
+      no_log: true
+
     # Step 1
     - name: Check connectivity
       block:
@@ -23,12 +39,8 @@
         - name: Download course files
           ansible.builtin.get_url:
             url: https://cm.lf.training/LFS258/{{ course_docs_name }}.tar.xz
-            url_username: "{{ lookup('bitwarden.secrets.lookup',
-                                bws.secret_ids.lfs_cm_username,
-                                access_token=bitwarden_access_token) }}"
-            url_password: "{{ lookup('bitwarden.secrets.lookup',
-                                bws.secret_ids.lfs_cm_password,
-                                access_token=bitwarden_access_token) }}"
+            url_username: "{{ lfs_secrets.cm_username }}"
+            url_password: "{{ lfs_secrets.cm_password }}"
             dest: /tmp/{{ course_docs_name }}.tar.xz
             mode: "0644"
           no_log: true

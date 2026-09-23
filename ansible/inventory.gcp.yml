@@ -1,4 +1,17 @@
 plugin: gcp_compute
+
+# Caching essential. Without cache, the plugin
+# calls google-auth, leaving threads running in the controller; Ansible
+# then fork()s a task worker and the Rust bitwarden-sdk segfaults inside it
+# ("A worker was found in a dead state"). Serving hosts from cache keeps the
+# controller single-threaded.
+#
+# Refresh after any tofu apply that changes instances:
+#   ansible-inventory -i inventory.gcp.yml --list
+cache: true
+cache_plugin: jsonfile
+cache_connection: .ansible/inventory-cache
+cache_timeout: 3600
 projects:
   - cka-lfs-458
 auth_kind: serviceaccount
